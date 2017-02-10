@@ -4,6 +4,7 @@ import (
 	"cgss/ipc"
 	"encoding/json"
 	"errors"
+	"fmt"
 )
 
 type CenterClient struct {
@@ -21,10 +22,11 @@ func (client *CenterClient) AddPlayer(player *Player) error {
 	}
 	return err
 }
- 
+
 func (client *CenterClient) ListPlayer(params string) (ps []*Player, err error) {
 	resp, _ := client.Call("listplayer", params)
 	if resp.Code != "200" {
+		fmt.Println(resp.Code)
 		err = errors.New(resp.Code)
 		return
 	}
@@ -33,7 +35,7 @@ func (client *CenterClient) ListPlayer(params string) (ps []*Player, err error) 
 }
 
 func (client *CenterClient) Broadcast(message string) error {
-	m := &Message{Cotent: message}
+	m := &Message{Content: message}
 	b, err := json.Marshal(m)
 	if err != nil {
 		return err
@@ -43,4 +45,12 @@ func (client *CenterClient) Broadcast(message string) error {
 		return nil
 	}
 	return errors.New(resp.Code)
+}
+
+func (client *CenterClient) RemovePlayer(name string) error {
+	ret, _ := client.Call("removeplayer", name)
+	if ret.Code == "200" {
+		return nil
+	}
+	return errors.New(ret.Code)
 }

@@ -4,15 +4,22 @@ import (
 	"cgss/ipc"
 	"encoding/json"
 	"errors"
+	"sync"
 )
 
-var _ ipc.Server = &CenterServer()
+var _ ipc.Server = &CenterServer{}
+
+type Message struct {
+	From    string "from"
+	To      string "to"
+	Content string "content"
+}
 
 type CenterServer struct {
 	servers map[string]ipc.Server
 	players []*Player
-	rooms   []*Room
-	mutex   sync.RWmutex
+	//rooms   []*Room
+	mutex sync.RWMutex
 }
 
 func NewCenterServer() *CenterServer {
@@ -22,7 +29,7 @@ func NewCenterServer() *CenterServer {
 	return &CenterServer{servers: servers, players: players}
 }
 
-func (server *CenterSever) addPlayer(params string) error {
+func (server *CenterServer) addPlayer(params string) error {
 	player := NewPlayer()
 	err := json.Unmarshal([]byte(params), &player)
 	if err != nil {
@@ -46,7 +53,7 @@ func (server *CenterServer) removePlayer(params string) error {
 			} else if i == 0 {
 				server.players = server.players[1:]
 			} else {
-				server.players = append(server.players[:i-1], server.players[i+1]...)
+				server.players = append(server.players[:i-1], server.players[:i+1]...)
 			}
 			return nil
 		}
@@ -91,12 +98,12 @@ func (server *CenterServer) Handle(method, params string) *ipc.Response {
 	case "addplayer":
 		err := server.addPlayer(params)
 		if err != nil {
-			return &ipc.Response{Code: err.Error}
+			return &ipc.Response{Code: err.Error()}
 		}
 	case "removeplayer":
 		err := server.removePlayer(params)
 		if err != nil {
-			return &ipc.Response{Code, err.Error()}
+			return &ipc.Response{Code: err.Error()}
 		}
 	case "listplayer":
 		players, err := server.listPlayer(params)
@@ -107,11 +114,11 @@ func (server *CenterServer) Handle(method, params string) *ipc.Response {
 	case "broadcast":
 		err := server.broadcast(params)
 		if err != nil {
-			return ipc.Response{Code, err.Error()}
+			return &ipc.Response{Code: err.Error()}
 		}
-		return &ipc.Response{"Code": "200"}
+		return &ipc.Response{Code: "200"}
 	default:
-		return &ipc.Response{"Code": "404", Body: method + ":" + params}
+		return &ipc.Response{Code: "404", Body: method + ":" + params}
 	}
 	return &ipc.Response{Code: "200"}
 }
